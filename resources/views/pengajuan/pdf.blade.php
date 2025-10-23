@@ -44,8 +44,7 @@
         }
     };
     $headerTanggal = $pengajuan->submitted_at ?? $pengajuan->created_at;
-    $signs = array_values(($signatories ?? []));
-    for ($i = count($signs); $i < 5; $i++) { $signs[] = ''; }
+    $signs = array_values(array_filter(($signatories ?? []), fn($n) => trim((string)$n) !== ''));
 @endphp
 
 <div class="header">
@@ -58,7 +57,7 @@
         <td class="label">No Surat</td>
         <td>: {{ $pengajuan->nomor }}</td>
         <td class="label">Tanggal</td>
-        <td>: {{ $fmtDate($headerTanggal) }}</td>
+        <td >: {{ $fmtDate($headerTanggal) }}</td>
     </tr>
     <tr>
         <td class="label">Div/ Dept/ CC</td>
@@ -91,8 +90,10 @@
         <tr>
             <td class="num">{{ $idx + 1 }}</td>
             <td>{{ $item->snapshot_nomor_polisi ?: ($stnk->nomor_polisi ?? '-') }}</td>
-            <td>{{ $fmtDate($tgl5) }}</td>
-            <td>{{ $fmtDate($tgl1) }}</td>
+
+            <td style="text-align: center;">{{ $fmtDate($tgl5) }}</td>
+            <td style="text-align: center;">{{ $fmtDate($tgl1) }}</td>
+
             <td class="right">{{ $fmtRp($subtotal) }}</td>
             {{-- <td>{{ $ket ?: '-' }}</td> --}}
         </tr>
@@ -116,7 +117,8 @@
         </td>
     </tr>
 </table>
-
+<br>
+<br>
 <div class="signatures">
     <div class="sign-row">
         @foreach ($signs as $name)

@@ -2,20 +2,21 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\StnkResource\Pages;
-use App\Filament\Resources\StnkResource\RelationManagers;
-use App\Models\Stnk;
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
+use App\Models\Stnk;
 use Filament\Tables;
-use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Collection;
+use Filament\Forms\Form;
 use App\Models\Pengajuan;
+use Filament\Tables\Table;
+use Filament\Support\RawJs;
 use App\Models\PengajuanItem;
+use Filament\Resources\Resource;
+use Illuminate\Support\Collection;
 use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Resources\StnkResource\Pages;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use App\Filament\Resources\StnkResource\RelationManagers;
 use Filament\Notifications\Actions\Action as NotificationAction;
 use App\Filament\Resources\PengajuanResource as PengajuanResourceFilament;
 
@@ -116,14 +117,13 @@ class StnkResource extends Resource
                         Forms\Components\TextInput::make('nominal_pokok_pajak')
                             ->label('Nominal Pokok Pajak (Rp)')
                             ->numeric()
-                            // mata uang ruapiah indonesia 
-                            ->prefix('Rp ')
-                            // ->thousands()
-                            
+                            ->mask(RawJs::make('$money($input)'))
+                            ->stripCharacters(',')
+                            ->prefix('Rp')
                             ->minValue(0)
                             ->default(0)
                             ->columnSpan(4),
-                            
+
                     ]),
 
                 Forms\Components\Section::make('Masa Berlaku')

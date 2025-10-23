@@ -104,9 +104,11 @@ class EditPengajuan extends EditRecord
                 ->form([
                     Forms\Components\TextInput::make('div_dept_cc')
                         ->label('Div/ Dept/ CC')
+                        ->default(fn (self $livewire) => $livewire->record?->div_dept_cc)
                         ->required(),
                     Forms\Components\TextInput::make('keperluan')
                         ->label('Keperluan')
+                        ->default(fn (self $livewire) => $livewire->record?->keperluan)
                         ->required(),
                     Forms\Components\Repeater::make('signatories')
                         ->label('Penandatangan')
@@ -115,6 +117,9 @@ class EditPengajuan extends EditRecord
                                 ->label('Nama')
                                 ->required(),
                         ])
+                        ->default(fn (self $livewire) => $livewire->record?->signatories
+                            ? $livewire->record->signatories->map(fn ($s) => ['name' => $s->name])->values()->all()
+                            : [])
                         ->columns(1)
                         ->minItems(1)
                         ->maxItems(5),

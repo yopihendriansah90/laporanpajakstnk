@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\PengajuanItem;
 use App\Models\PengajuanLog;
 use App\Models\User;
+use App\Models\PengajuanSignatory;
 
 class Pengajuan extends Model
 {
@@ -24,6 +25,8 @@ class Pengajuan extends Model
         'approved_at',
         'rejected_at',
         'paid_at',
+        'div_dept_cc',
+        'keperluan',
         'created_by',
     ];
 
@@ -69,7 +72,9 @@ class Pengajuan extends Model
 
     public static function generateNomor(): string
     {
-        $prefix = 'MJM-' . date('Ym') . '-';
+        // Pola: {PREFIX}{YYYYMM}-{SEQ4}, PREFIX dari env PENGAJUAN_PREFIX (default: "AJG-")
+        $prefixConfig = (string) env('PENGAJUAN_PREFIX', 'MJM-');
+        $prefix = $prefixConfig . date('Ym') . '-';
 
         $latest = static::withTrashed()
             ->where('nomor', 'like', $prefix . '%')
@@ -77,12 +82,8 @@ class Pengajuan extends Model
             ->value('nomor');
 
         $next = 1;
-        if ($latest) {
-            $parts = explode('-', $latest);
-            $last = end($parts);
-            if (is_numeric($last)) {
-                $next = ((int) $last) + 1;
-            }
+        if ($latest && preg_match('/(\d{4})$/', $latest, $m)) {
+            $next = ((int) $m[1]) + 1;
         }
 
         return $prefix . str_pad((string) $next, 4, '0', STR_PAD_LEFT);
@@ -97,6 +98,11 @@ class Pengajuan extends Model
     public function logs()
     {
         return $this->hasMany(PengajuanLog::class);
+    }
+
+    public function signatories()
+    {
+        return $this->hasMany(PengajuanSignatory::class)->orderBy('order');
     }
 
     public function creator()

@@ -11,12 +11,14 @@ class PengajuanPdfController extends Controller
 {
     public function show(Request $request, Pengajuan $pengajuan)
     {
-        $pengajuan->load(['items.stnk', 'creator']);
+        $pengajuan->load(['items.stnk', 'creator', 'signatories']);
 
-        $divDeptCc = $request->input('div_dept_cc');
-        $keperluan = $request->input('keperluan');
+        // Gunakan input export bila ada, fallback ke nilai yang tersimpan di pengajuans
+        $divDeptCc = $request->input('div_dept_cc', $pengajuan->div_dept_cc);
+        $keperluan = $request->input('keperluan', $pengajuan->keperluan);
 
-        $signInput = $request->input('signatories', []);
+        // Ambil penandatangan dari request (jika diisi), atau fallback dari relasi yang tersimpan
+        $signInput = $request->input('signatories', null);
         if (is_array($signInput)) {
             if ($this->isArrayOfAssoc($signInput)) {
                 $signatories = array_values(array_filter(array_map(fn ($row) => trim((string) ($row['name'] ?? '')), $signInput)));
@@ -24,7 +26,29 @@ class PengajuanPdfController extends Controller
                 $signatories = array_values(array_filter(array_map('strval', $signInput)));
             }
         } else {
-            $signatories = [];
+            $signatories = $pengajuan->signatories->pluck('name')->all();
+        }
+
+        // Persist nilai header dan penandatangan ke database agar bisa dipakai di kemudian hari
+        $pengajuan->div_dept_cc = $divDeptCc;
+        $pengajuan->keperluan = $keperluan;
+        $pengajuan->save();
+
+        if (is_array($signInput)) {
+            // Sinkronisasi penandatangan: hapus lama dan buat ulang sesuai urutan input
+            $pengajuan->signatories()->delete();
+            foreach ($signatories as $index => $name) {
+                $name = trim((string) $name);
+                if ($name === '') {
+                    continue;
+                }
+                $pengajuan->signatories()->create([
+                    'name' => $name,
+                    'order' => $index + 1,
+                ]);
+            }
+            // Muat ulang relasi agar konsisten untuk render
+            $pengajuan->load('signatories');
         }
 
         $data = [
@@ -35,7 +59,9 @@ class PengajuanPdfController extends Controller
             'signatories' => $signatories,
         ];
 
-        $pdf = Pdf::loadView('pengajuan.pdf', $data)->setPaper('a4', 'portrait');
+        // $pdf = Pdf::loadView('pengajuan.pdf', $data)->setPaper('a4', 'portrait');
+        $pdf = Pdf::loadView('pengajuan.pdf', $data)->setPaper('a4', 'landscape');
+
 
         $content = $pdf->output();
 
