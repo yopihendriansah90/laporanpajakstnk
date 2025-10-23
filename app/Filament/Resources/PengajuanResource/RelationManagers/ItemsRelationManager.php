@@ -281,18 +281,22 @@ class ItemsRelationManager extends RelationManager
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make()
-                    ->visible(fn () => $this->canCreate()),
+                    ->visible(fn () => $this->canCreate())
+                    ->after(fn () => $this->notifyParentToRefresh()),
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->visible(fn (Model $record) => $this->canEdit($record)),
+                    ->visible(fn (Model $record) => $this->canEdit($record))
+                    ->after(fn () => $this->notifyParentToRefresh()),
                 Tables\Actions\DeleteAction::make()
-                    ->visible(fn (Model $record) => $this->canDelete($record)),
+                    ->visible(fn (Model $record) => $this->canDelete($record))
+                    ->after(fn () => $this->notifyParentToRefresh()),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
-                        ->visible(fn () => $this->canCreate()), // hanya saat draft
+                        ->visible(fn () => $this->canCreate()) // hanya saat draft
+                        ->after(fn () => $this->notifyParentToRefresh()),
                 ]),
             ]);
     }
@@ -310,6 +314,16 @@ class ItemsRelationManager extends RelationManager
     protected function canDelete(Model $record): bool
     {
         return $this->getOwnerRecord()->status === 'draft';
+    }
+
+    private function notifyParentToRefresh(): void
+    {
+        $owner = $this->getOwnerRecord();
+        if ($owner) {
+            $owner->refresh();
+        }
+        // Broadcast event untuk didengarkan oleh EditPengajuan (parent page)
+        $this->dispatch('pengajuan-items-updated');
     }
 
     protected static function formatRp(?int $value): string

@@ -7,6 +7,7 @@ use Filament\Actions;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Livewire\Attributes\On;
 
 class EditPengajuan extends EditRecord
 {
@@ -145,5 +146,21 @@ class EditPengajuan extends EditRecord
                     $this->redirect($url);
                 }),
         ];
+    }
+    #[On('pengajuan-items-updated')]
+    public function onItemsUpdated(): void
+    {
+        // Refresh record & form agar Placeholder di Informasi Pengajuan langsung ter-update
+        if ($this->record) {
+            $this->record->refresh();
+        }
+
+        // Isi ulang form dari data record terbaru
+        if (method_exists($this, 'fillForm')) {
+            $this->fillForm();
+        } else {
+            // Fallback: paksa Livewire re-render jika metode tidak tersedia
+            $this->dispatch('$refresh');
+        }
     }
 }
