@@ -6,19 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
-use App\Models\PengajuanItem;
-use App\Models\PengajuanLog;
-use App\Models\User;
-use App\Models\PengajuanSignatory;
 
-class Pengajuan extends Model
+class PengajuanKir extends Model
 {
     use HasFactory, SoftDeletes;
+
+    protected $table = 'pengajuan_kirs';
 
     protected $fillable = [
         'nomor',
         'status',
-        'total_pokok',
+        'total_biaya_uji',
         'total_admin',
         'grand_total',
         'submitted_at',
@@ -31,13 +29,13 @@ class Pengajuan extends Model
     ];
 
     protected $casts = [
-        'total_pokok'   => 'int',
-        'total_admin'   => 'int',
-        'grand_total'   => 'int',
-        'submitted_at'  => 'datetime',
-        'approved_at'   => 'datetime',
-        'rejected_at'   => 'datetime',
-        'paid_at'       => 'datetime',
+        'total_biaya_uji' => 'int',
+        'total_admin'     => 'int',
+        'grand_total'     => 'int',
+        'submitted_at'    => 'datetime',
+        'approved_at'     => 'datetime',
+        'rejected_at'     => 'datetime',
+        'paid_at'         => 'datetime',
     ];
 
     public static function booted(): void
@@ -59,21 +57,21 @@ class Pengajuan extends Model
             }
 
             // Initialize totals
-            $model->total_pokok ??= 0;
+            $model->total_biaya_uji ??= 0;
             $model->total_admin ??= 0;
-            $model->grand_total = (int) $model->total_pokok + (int) $model->total_admin;
+            $model->grand_total = (int) $model->total_biaya_uji + (int) $model->total_admin;
         });
 
         static::saving(function (self $model): void {
             // Keep grand_total consistent
-            $model->grand_total = (int) $model->total_pokok + (int) $model->total_admin;
+            $model->grand_total = (int) $model->total_biaya_uji + (int) $model->total_admin;
         });
     }
 
     public static function generateNomor(): string
     {
-        // Pola: {PREFIX}{YYYYMM}-{SEQ4}, PREFIX dari env PENGAJUAN_PREFIX (default: "AJG-")
-        $prefixConfig = (string) env('PENGAJUAN_PREFIX_STNK', 'STNK-');
+        // Pola: {PREFIX}{YYYYMM}-{SEQ4}, PREFIX dari env PENGAJUAN_KIR_PREFIX (default: "KIR-")
+        $prefixConfig = (string) env('PENGAJUAN_KIR_PREFIX_KIR', 'KIR-');
         $prefix = $prefixConfig . date('Ym') . '-';
 
         $latest = static::withTrashed()
@@ -92,17 +90,17 @@ class Pengajuan extends Model
     // Relations
     public function items()
     {
-        return $this->hasMany(PengajuanItem::class);
+        return $this->hasMany(PengajuanKirItem::class, 'pengajuan_kir_id');
     }
 
     public function logs()
     {
-        return $this->hasMany(PengajuanLog::class);
+        return $this->hasMany(PengajuanKirLog::class, 'pengajuan_kir_id');
     }
 
     public function signatories()
     {
-        return $this->hasMany(PengajuanSignatory::class)->orderBy('order');
+        return $this->hasMany(PengajuanKirSignatory::class, 'pengajuan_kir_id')->orderBy('order');
     }
 
     public function creator()
@@ -115,17 +113,17 @@ class Pengajuan extends Model
     {
         $this->loadMissing('items');
 
-        $totalPokok = (int) $this->items->sum('snapshot_nominal_pokok_pajak');
-        $totalAdmin = (int) $this->items->sum('admin_fee');
+        $totalBiayaUji = (int) $this->items->sum('snapshot_nominal_biaya_uji');
+        $totalAdmin    = (int) $this->items->sum('admin_fee');
 
-        $this->total_pokok = $totalPokok;
-        $this->total_admin = $totalAdmin;
-        $this->grand_total = $totalPokok + $totalAdmin;
+        $this->total_biaya_uji = $totalBiayaUji;
+        $this->total_admin     = $totalAdmin;
+        $this->grand_total     = $totalBiayaUji + $totalAdmin;
 
         $this->save();
     }
 
-    // Status transitions (optional helpers)
+    // Status transitions (helpers)
     public function markSubmitted(?string $message = null, ?array $metadata = null, ?int $userId = null): void
     {
         $from = $this->status;

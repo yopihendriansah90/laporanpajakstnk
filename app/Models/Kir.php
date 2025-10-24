@@ -14,6 +14,7 @@ class Kir extends Model implements HasMedia
         'stnk_id',
         'nomor_uji_kendaraan',
         'masa_berlaku',
+        'nominal_biaya_uji',
     ];
 
     public function registerMediaCollections(): void

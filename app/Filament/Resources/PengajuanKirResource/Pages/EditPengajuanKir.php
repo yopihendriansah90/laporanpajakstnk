@@ -1,17 +1,17 @@
 <?php
 
-namespace App\Filament\Resources\PengajuanResource\Pages;
+namespace App\Filament\Resources\PengajuanKirResource\Pages;
 
-use App\Filament\Resources\PengajuanResource;
+use App\Filament\Resources\PengajuanKirResource;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Livewire\Attributes\On;
 
-class EditPengajuan extends EditRecord
+class EditPengajuanKir extends EditRecord
 {
-    protected static string $resource = PengajuanResource::class;
+    protected static string $resource = PengajuanKirResource::class;
 
     protected function getHeaderActions(): array
     {
@@ -34,9 +34,9 @@ class EditPengajuan extends EditRecord
                         return;
                     }
 
-                    $this->record->markSubmitted('Submit via Filament');
+                    $this->record->markSubmitted('Submit Pengajuan KIR via Filament');
                     Notification::make()
-                        ->title('Pengajuan berhasil diajukan.')
+                        ->title('Pengajuan KIR berhasil diajukan.')
                         ->success()
                         ->send();
 
@@ -50,10 +50,10 @@ class EditPengajuan extends EditRecord
                 ->requiresConfirmation()
                 ->visible(fn () => $this->record?->status === 'diajukan')
                 ->action(function (): void {
-                    $this->record->markApproved('Approve via Filament');
+                    $this->record->markApproved('Approve Pengajuan KIR via Filament');
 
                     Notification::make()
-                        ->title('Pengajuan disetujui.')
+                        ->title('Pengajuan KIR disetujui.')
                         ->success()
                         ->send();
                 }),
@@ -74,7 +74,7 @@ class EditPengajuan extends EditRecord
                     $this->record->markRejected($data['message'] ?? null);
 
                     Notification::make()
-                        ->title('Pengajuan ditolak.')
+                        ->title('Pengajuan KIR ditolak.')
                         ->danger()
                         ->send();
 
@@ -88,10 +88,10 @@ class EditPengajuan extends EditRecord
                 ->requiresConfirmation()
                 ->visible(fn () => $this->record?->status === 'disetujui')
                 ->action(function (): void {
-                    $this->record->markPaid('Mark paid via Filament');
+                    $this->record->markPaid('Mark paid Pengajuan KIR via Filament');
 
                     Notification::make()
-                        ->title('Pengajuan ditandai dibayar.')
+                        ->title('Pengajuan KIR ditandai dibayar.')
                         ->success()
                         ->send();
 
@@ -101,7 +101,7 @@ class EditPengajuan extends EditRecord
             Actions\Action::make('export_pdf')
                 ->label('Export PDF')
                 ->icon('heroicon-o-arrow-down-tray')
-                ->modalHeading('Export PDF Pengajuan')
+                ->modalHeading('Export PDF Pengajuan KIR')
                 ->form([
                     Forms\Components\TextInput::make('div_dept_cc')
                         ->label('Div/ Dept/ CC')
@@ -126,7 +126,7 @@ class EditPengajuan extends EditRecord
                         ->maxItems(5),
                 ])
                 ->action(function (array $data): void {
-                    $baseUrl = route('pengajuan.pdf', ['pengajuan' => $this->record]);
+                    $baseUrl = route('pengajuan_kir.pdf', ['pengajuanKir' => $this->record]);
 
                     $names = array_values(array_filter(array_map(
                         fn ($row) => trim((string) ($row['name'] ?? '')),
@@ -151,7 +151,8 @@ class EditPengajuan extends EditRecord
                 }),
         ];
     }
-    #[On('pengajuan-items-updated')]
+
+    #[On('pengajuan-kir-items-updated')]
     public function onItemsUpdated(): void
     {
         // Refresh record & form agar Placeholder di Informasi Pengajuan langsung ter-update

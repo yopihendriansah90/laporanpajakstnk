@@ -2,16 +2,23 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\KirResource\Pages;
-use App\Filament\Resources\KirResource\RelationManagers;
 use App\Models\Kir;
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Forms\Form;
 use Filament\Tables\Table;
+use Filament\Support\RawJs;
+use App\Models\PengajuanKir;
+use App\Models\PengajuanKirItem;
+use Filament\Resources\Resource;
+use Illuminate\Support\Collection;
+use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Resources\KirResource\Pages;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use App\Filament\Resources\KirResource\RelationManagers;
+use Filament\Notifications\Actions\Action as NotificationAction;
+use App\Filament\Resources\PengajuanKirResource as PengajuanKirResourceFilament;
 
 class KirResource extends Resource
 {
@@ -84,6 +91,17 @@ class KirResource extends Resource
                             ->helperText('Tanggal berlaku tercatat. Nilai lama diizinkan saat edit.')
                             ->hiddenOn('create')
                             ->columnSpan(6),
+                        // nominal biaya uji
+                        Forms\Components\TextInput::make('nominal_biaya_uji')
+                            ->label('Biaya Uji (Rp)')
+                            ->numeric()
+                            ->minValue(0)
+                            // ->default(0)
+                            ->prefix('Rp ')
+                             ->mask(RawJs::make('$money($input)'))
+                            ->stripCharacters(',')
+                            ->required()
+                            ->columnSpan(6),
                     ]),
 
                 Forms\Components\Section::make('Dokumen Pendukung')
@@ -128,6 +146,13 @@ class KirResource extends Resource
                     ->searchable()
                     ->copyable()
                     ->sortable(),
+                    // nominal biaya uji
+
+                Tables\Columns\TextColumn::make('nominal_biaya_uji')
+                    ->label('Biaya Uji')
+                    ->formatStateUsing(fn ($state) => 'Rp ' . number_format($state, 0, ',', '.'))
+                    ->sortable(),
+                    
 
                 Tables\Columns\TextColumn::make('masa_berlaku')
                     ->label('Masa Berlaku')
@@ -173,6 +198,64 @@ class KirResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('buat_pengajuan_kir')
+                        ->label('Buat Pengajuan KIR dari Terpilih')
+                        ->icon('heroicon-o-document-plus')
+                        ->requiresConfirmation()
+                        ->form([
+                            Forms\Components\TextInput::make('admin_fee_default')
+                                ->label('Biaya Admin Default per Item (Rp)')
+                                ->numeric()
+                                ->minValue(0)
+                                ->default(0)
+                                ->prefix('Rp '),
+                        ])
+                        ->action(function (Collection $records, array $data): void {
+                            if ($records->isEmpty()) {
+                                Notification::make()
+                                    ->title('Tidak ada KIR terpilih.')
+                                    ->danger()
+                                    ->send();
+                                return;
+                            }
+
+                            // Buat dokumen pengajuan KIR draft (nomor & created_by auto via model hooks)
+                            $pengajuan = PengajuanKir::create([]);
+
+                            $adminDefault = (int) ($data['admin_fee_default'] ?? 0);
+
+                            $records->each(function (Kir $kir) use ($pengajuan, $adminDefault) {
+                                // Abaikan jika KIR terhapus lembut
+                                if (! is_null($kir->deleted_at)) {
+                                    return;
+                                }
+
+                                PengajuanKirItem::create([
+                                    'pengajuan_kir_id' => $pengajuan->id,
+                                    'kir_id' => $kir->id,
+                                    'snapshot_nomor_uji' => $kir->nomor_uji_kendaraan,
+                                    'snapshot_masa_berlaku' => $kir->masa_berlaku,
+                                    'snapshot_nominal_biaya_uji' => (int) ($kir->nominal_biaya_uji ?? 0),
+                                    'admin_fee' => $adminDefault,
+                                ]);
+                            });
+
+                            // Hitung ulang total setelah penambahan item
+                            $pengajuan->recalcTotals();
+
+                            // Notifikasi dengan tombol untuk membuka halaman edit pengajuan KIR
+                            $url = PengajuanKirResourceFilament::getUrl('edit', ['record' => $pengajuan]);
+                            Notification::make()
+                                ->title('Pengajuan KIR dibuat dari KIR terpilih.')
+                                ->success()
+                                ->body('Klik tombol di bawah untuk membuka dokumen.')
+                                ->actions([
+                                    NotificationAction::make('Buka')->url($url)->button(),
+                                ])
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
                     Tables\Actions\DeleteBulkAction::make(),
                     Tables\Actions\ForceDeleteBulkAction::make(),
                     Tables\Actions\RestoreBulkAction::make(),

@@ -27,6 +27,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->maxContentWidth('7xl')
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -35,10 +36,12 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 Pages\Dashboard::class,
             ])
-            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
+                \App\Filament\Widgets\ExpiryStats::class,
+                \App\Filament\Widgets\StnkStatusCards::class,
+                \App\Filament\Widgets\KirStatusCards::class,
+                \App\Filament\Widgets\StnkLatestTable::class,
+                \App\Filament\Widgets\KirLatestTable::class,
             ])
             ->middleware([
                 EncryptCookies::class,

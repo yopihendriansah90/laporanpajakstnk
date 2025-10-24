@@ -8,3 +8,6 @@ Route::get('/', function () {
 
 Route::get('/pengajuan/{pengajuan}/pdf', [\App\Http\Controllers\PengajuanPdfController::class, 'show'])
     ->name('pengajuan.pdf');
+
+Route::get('/pengajuan-kir/{pengajuanKir}/pdf', [\App\Http\Controllers\PengajuanKirPdfController::class, 'show'])
+    ->name('pengajuan_kir.pdf');
